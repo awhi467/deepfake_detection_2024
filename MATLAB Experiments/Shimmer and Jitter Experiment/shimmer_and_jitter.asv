@@ -1,0 +1,24 @@
+clear;
+addpath('..\Speech samples');
+addpath('Troparion-master\IRAPT\IRAPT_web');
+
+filename = 'vowel.wav';
+[s Fs]=audioread(filename);
+
+[Fo, ~, time_marks] = irapt(s, Fs, 'irapt1','sustain phonation');  
+    
+% Segmentation of signal onto fundamental periods
+[Fo_periods] = WM_phase_const(s,Fo,time_marks,Fs);
+[periods_Amp]= amp_extract(Fo_periods,s);
+    
+%% Perturbation parameters calculation
+J_loc  = shim_local(Fo_periods);
+J_rap  = shim_apq3(Fo_periods);
+J_ppq5 = shim_apq5(Fo_periods);
+J_apq17 = shimmer_apq(Fo_periods,17);
+
+S_loc   = shim_local(periods_Amp);
+S_apq3  = shim_apq3(periods_Amp);
+S_apq5  = shim_apq5(periods_Amp);
+S_apq11 = shim_apq11(periods_Amp);
+S_apq17  = shimmer_apq(periods_Amp,17);

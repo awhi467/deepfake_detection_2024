@@ -1,0 +1,18 @@
+% Removes silent parts of the audio
+
+clear;
+addpath('Natural Speech\Isabella (16kHz)');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Natural Speech\Nick (16kHz)');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Isabella');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Nick');
+
+original = dir('Natural Speech\Nick (16kHz)');
+
+for i = 1:size(original,1)
+    if ~original(i).isdir
+        s = audioread(original(i).name);
+        smax = movmax(s,100);
+        snew = s(smax>0.001);
+        audiowrite(original(i).name, snew, 16000);
+    end
+end

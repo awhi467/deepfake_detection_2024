@@ -1,0 +1,45 @@
+clear;
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Natural Speech\Isabella (16kHz)');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Natural Speech\Nick (16kHz)');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Isabella');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Nick');
+addpath('..\Speech samples\fs2\ljspeech')
+addpath('..\Speech samples\')
+
+% Read audio file
+%filename = 'lj1.wav';
+filename = 'NaturalNick00.wav';
+[s,fs] = audioread(filename);
+start = 0;
+duration = 1000;
+
+% Pre emphasise
+pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
+s_pe = lsim(pe,s);
+
+% Linear prediction
+p = 1000;%ceil(fs/1000+2);
+a = lpc(s,p);
+
+% Calculate the frequency response
+f = 0:fs/2-1;
+den = 0;
+for i=1:size(a,2)
+    den = den + a(i)*exp(1i*2*pi*f*(i-1)/fs);
+end
+%vt = 10*log10(abs(1./den));
+vt = abs(1./den);
+plot(vt)
+
+% Bispectrum of the vocal tract
+nfft = fs/2;
+indices = mod((0:nfft-1)+(0:nfft-1)',nfft) + 1;
+Bv = sfft_frame * transpose(sfft_frame) .* conj(sfft_frame(indices));
+Bv = transpose(vt) * vt;
+
+
+vt_zm = vt-mean(vt);
+
+a1 = sum(vt_zm(1:floor(fs/4)));
+a2 = sum(vt((floor(fs/4)+1):end));
+r=a2/a1;
