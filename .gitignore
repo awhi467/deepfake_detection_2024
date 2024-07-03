@@ -1,0 +1,8 @@
+# Ignore generated data files
+*.csv
+*.spec
+*.asv
+
+# Ignore build directories
+*/build/*
+*/dist/*
