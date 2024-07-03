@@ -35,6 +35,8 @@ wind = hamming(nfft+1);
 
 % Skewness function
 sk = bicoher(s,nfft,wind,nsamp,overlap);
+skn = (sk-min(sk(:)))/(max(sk(:))-min(sk(:)));
+writematrix(skn, 'skn.csv')
 
 %sk = (abs(B))^2/(P*transpose(P))
 

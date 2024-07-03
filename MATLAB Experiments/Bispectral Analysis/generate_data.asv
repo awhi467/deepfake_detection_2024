@@ -1,0 +1,50 @@
+clear;
+addpath('functions');
+addpath('phase_unwrap')
+addpath('hosa_toolbox')
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Natural Speech\Isabella (16kHz)');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Natural Speech\Nick (16kHz)');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Isabella');
+addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Nick');
+addpath('..\Speech samples\fs2')
+addpath('..\Speech samples\')
+
+% Specify directory of .wav files
+path = '..\Speech samples\Natural-Tacotron2-pairs\Natural Speech\Isabella (16kHz)';
+wav_files = dir (strcat(path,'\*.wav'));
+
+% Params
+nlag = 25;
+nsamp = 256;
+overlap = 50;
+nfft = 256;
+wind = hamming(nfft+1);
+fs= 16000;
+
+% Define pre-emphasis filter
+pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
+
+% Loop through .wav files and compute features
+for i=1:size(wav_files,1)
+
+    % Read file and pre-emphasise
+    [s,fs] = audioread(wav_files(i).name);
+    s = lsim(pe,s);
+
+    % Bispectrum
+    [B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);
+    B = process(B,nfft);
+
+    % Skewness
+    [sk,axis] = bicoher(s,nfft,wind,nsamp,overlap);
+    sk = (sk);
+
+
+
+end
+
+function xnorm = process(x,nfft)
+    x = x(nfft/2:end, nfft/2:end);
+    [min,max] = bounds(abs(x(:)));
+    xnorm = (x-min)/(max-min);
+end
