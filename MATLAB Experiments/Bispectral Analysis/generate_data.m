@@ -44,6 +44,25 @@ for i=1:size(wav_files,1)
     sk = process(sk,nfft);
     writematrix(sk,strcat(path_out,'\sk_', erase(wav_files(i).name, '.wav'),'.csv'))
 
+    % Complex bicepstrum
+    Blog = log(abs(B)) + 1j*phase_unwrap(angle(B));
+    b = ifft2(Blog);
+    b(1,1)=b(1,1)/3;
+
+    % Compute linear and nonlinear complex bicepstrum
+    bL = zeros(nfft);
+    bL(1,:) = b(1,:);
+    bL(:,1) = b(:,1);
+    bL(1:nfft+1:end) = diag(b);
+    bN = b - bL;
+    bH = b(1,:);
+
+    % Compute linear and nonlinear bispectrum
+    BL = exp(fft2(bL));
+    BN = exp(fft2(bN));
+    BL = process(BL,nfft);
+    BN = process(BN,nfft);
+    
 end
 
 % Reduce the size to the first quadrant, normalise magnitudes
