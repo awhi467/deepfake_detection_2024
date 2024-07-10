@@ -1,38 +1,30 @@
 #Import scikit-learn dataset library
 from sklearn import datasets
-
-#Import svm model
 from sklearn import svm
-
-#Import scikit-learn metrics module for accuracy calculation
 from sklearn import metrics
-
-#Load dataset
-cancer = datasets.load_breast_cancer()
-
-# print the names of the 13 features
-print("Features: ", cancer.feature_names)
-
-# print the label type of cancer('malignant' 'benign')
-print("Labels: ", cancer.target_names)
-
-# print data(feature)shape
-cancer.data.shape
-
-# print the cancer data features (top 5 records)
-print(cancer.data[0:5])
-
-# print the cancer labels (0:malignant, 1:benign)
-print(cancer.target)
-
-# Import train_test_split function
 from sklearn.model_selection import train_test_split
+import csv
+
+# Open and read the .csv file and convert data to a list
+with open('tacotron2_B_mag_ph_moments.csv', mode='r', encoding='utf-8') as file:
+    data = list(csv.reader(file, delimiter=','))
+data = data[1:]
+
+features = []
+targets = []
+
+for row in data:
+    current_features = row[2:]
+    [float(feature) for feature in current_features]
+    current_target = float(row[1])
+    features.append(current_features)
+    targets.append(current_target)
 
 # Split dataset into training set and test set
-X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, test_size=0.3,random_state=109) # 70% training and 30% test
+X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.3) # 70% training and 30% test
 
 #Create a svm Classifier
-clf = svm.SVC(kernel='poly') # Linear Kernel
+clf = svm.SVC(kernel='rbf') # Linear Kernel
 
 #Train the model using the training sets
 clf.fit(X_train, y_train)
