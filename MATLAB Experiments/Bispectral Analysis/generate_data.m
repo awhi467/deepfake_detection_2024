@@ -84,9 +84,9 @@ function y = process(x,nfft)
 end
 
 % Compute the first four statistical moments
-function [m1,m2,m3,m4] = compute_moments(x)
-    m1 = mean(x(:));
-    m2 = var(x(:));
-    m3 = skewness(x(:));
-    m4 = kurtosis(x(:));
+function [m1,m2,m3,m4] = compute_moments(B)
+    f=linspace(0,128,129);
+    m00 = sum(B(:));
+    m10 = sum(f(:).*B(:));
+    mean = m10/m00;
 end
