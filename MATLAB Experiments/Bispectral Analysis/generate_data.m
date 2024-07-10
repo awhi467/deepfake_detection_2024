@@ -10,7 +10,8 @@ addpath('..\Speech samples\fs2')
 addpath('..\Speech samples\')
 
 % Specify directory of .wav files
-path_in = '..\Speech samples\Natural-Tacotron2-pairs\Natural Speech\Isabella (16kHz)';
+path_in = ['..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Nick'];
+is_synthetic = 0;       % 0 for natural, 1 for synthetic
 wav_files = dir(strcat(path_in,'\*.wav'));
 
 % Specify output directory
@@ -27,6 +28,8 @@ fs= 16000;
 % Define pre-emphasis filter
 pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
 
+f = [];
+
 % Loop through .wav files and compute features
 for i=1:size(wav_files,1)
 
@@ -34,15 +37,9 @@ for i=1:size(wav_files,1)
     [s,fs] = audioread(wav_files(i).name);
     s = lsim(pe,s);
 
-    % Bispectrum
+    % Bispectrum and skewness
     [B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);
-    B = process(B,nfft);
-    writematrix(B,strcat(path_out,'\B_', erase(wav_files(i).name, '.wav'),'.csv'))
-
-    % Skewness
     [sk,axis] = bicoher(s,nfft,wind,nsamp,overlap);
-    sk = process(sk,nfft);
-    writematrix(sk,strcat(path_out,'\sk_', erase(wav_files(i).name, '.wav'),'.csv'))
 
     % Complex bicepstrum
     Blog = log(abs(B)) + 1j*phase_unwrap(angle(B));
@@ -63,6 +60,20 @@ for i=1:size(wav_files,1)
     BL = process(BL,nfft);
     BN = process(BN,nfft);
     
+    B = process(B,nfft);
+    %writematrix(B,strcat(path_out,'\B_', erase(wav_files(i).name, '.wav'),'.csv'))
+    sk = process(sk,nfft);
+    %writematrix(sk,strcat(path_out,'\sk_', erase(wav_files(i).name, '.wav'),'.csv'))
+
+    % Compute the first four statistical moments of mag/phase
+    B_mag = abs(sk);     %or abs(B)
+    B_ph = angle(B);
+    [B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4] = compute_moments(B_mag);
+    [B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4] = compute_moments(B_ph);
+
+    % Define feature vector
+    f = [f; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
+    
 end
 
 % Reduce the size to the first quadrant, normalise magnitudes
@@ -70,4 +81,12 @@ function y = process(x,nfft)
     y = x(nfft/2:end, nfft/2:end);
     [min,max] = bounds(abs(y(:)));
     y = (y-min)/(max-min);
+end
+
+% Compute the first four statistical moments
+function [m1,m2,m3,m4] = compute_moments(x)
+    m1 = mean(x(:));
+    m2 = var(x(:));
+    m3 = skewness(x(:));
+    m4 = kurtosis(x(:));
 end
