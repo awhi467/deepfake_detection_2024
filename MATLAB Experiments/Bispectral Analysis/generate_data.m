@@ -42,7 +42,7 @@ for i=1:size(wav_files,1)
     [sk,axis] = bicoher(s,nfft,wind,nsamp,overlap);
 
     % Complex bicepstrum
-    Blog = log(abs(B)) + 1j*phase_unwrap(angle(B));
+    Blog = log(abs(sk)) + 1j*phase_unwrap(angle(B));
     b = ifft2(Blog);
     b(1,1)=b(1,1)/3;
 
@@ -66,8 +66,8 @@ for i=1:size(wav_files,1)
     %writematrix(sk,strcat(path_out,'\sk_', erase(wav_files(i).name, '.wav'),'.csv'))
 
     % Compute the first four statistical moments of mag/phase
-    B_mag = abs(sk);     %or abs(B)
-    B_ph = angle(B);
+    B_mag = abs(BN);     %or abs(B)
+    B_ph = angle(BN);
     [B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4] = compute_moments(B_mag);
     [B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4] = compute_moments(B_ph);
 
@@ -85,8 +85,8 @@ end
 
 % Compute the first four statistical moments
 function [m1,m2,m3,m4] = compute_moments(B)
-    f=linspace(0,128,129);
-    m00 = sum(B(:));
-    m10 = sum(f(:).*B(:));
-    mean = m10/m00;
+    m1 = mean(B(:));
+    m2 = var(B(:));
+    m3 = skewness(B(:));
+    m4 = kurtosis(B(:));
 end
