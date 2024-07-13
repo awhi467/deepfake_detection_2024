@@ -1,5 +1,4 @@
 # Ignore generated data files
-*.csv
 *.spec
 *.asv
 

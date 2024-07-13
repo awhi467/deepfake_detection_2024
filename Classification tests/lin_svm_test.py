@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 import csv
 
 # Open and read the .csv file and convert data to a list
-with open('tacotron2_BcN_mag_ph_moments.csv', mode='r', encoding='utf-8') as file:
+with open('tacotron2_BN_mag_ph_moments_vowels.csv', mode='r', encoding='utf-8') as file:
     data = list(csv.reader(file, delimiter=','))
 data = data[1:]
 
@@ -21,7 +21,7 @@ for row in data:
     targets.append(current_target)
 
 # Split dataset into training set and test set
-X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2) # 80% training and 20% test
+X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.3) # 80% training and 20% test
 
 #Create a svm Classifier
 clf = svm.SVC(kernel='rbf') # Linear Kernel
