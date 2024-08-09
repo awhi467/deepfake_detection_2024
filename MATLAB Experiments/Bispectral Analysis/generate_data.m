@@ -1,4 +1,4 @@
-clear;
+    clear;
 addpath('functions');
 addpath('phase_unwrap')
 addpath('hosa_toolbox')
@@ -9,10 +9,10 @@ addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Nick');
 addpath('..\Speech samples\fs2')
 addpath('..\Speech samples\')
 addpath('..\Speech samples\LJ_synthetic')
-addpath('..\Speech samples\LJSpeech natural')
+addpath('..\Speech samples\LJ_natural')
 
 % Specify directory of .wav files
-path_in = ['..\Speech samples\LJ_synthetic'];
+path_in = ['..\Speech samples\LJ_natural'];
 is_synthetic = 0;       % 0 for natural, 1 for synthetic
 wav_files = dir(strcat(path_in,'\*.wav'));
 % Specify output directory
@@ -65,11 +65,11 @@ for i=1:size(wav_files,1)
     [B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4] = compute_moments(B_mag);
     [B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4] = compute_moments(B_ph);
     % Define feature vector
-    %f = [f; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
+    %fa = [fa; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
     [rad,ax] = integration_measures(B);
     fa = [fa;abs(rad)];
-    ax = sum(reshape(ax, 16, 16),2);
-    fb = [fb;abs(ax')];
+    ax = sum(reshape(ax, 256, 1),2)';
+    fb = [fb;abs(ax)];
     
 end
 % Reduce the size to the first quadrant, normalise magnitudes
@@ -106,7 +106,7 @@ function [rad, ax] = integration_measures(B)
     [Theta, R] = cart2pol(Bf1, Bf2);
     
     % Define radial bins
-    num_bins = 21;  % Adjust the number of bins as necessary
+    num_bins = 41;  % Adjust the number of bins as necessary
     r_max = max(R(:));
     radial_bins = linspace(0, r_max, num_bins);
     radial_values = zeros(1, num_bins-1);

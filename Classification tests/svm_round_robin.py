@@ -7,7 +7,7 @@ import csv
 import numpy as np
 
 # Open and read the .csv file and convert data to a list
-with open('ljspeech_ax.csv', mode='r', encoding='utf-8') as file:
+with open('ljspeech_rad40.csv', mode='r', encoding='utf-8') as file:
     data = list(csv.reader(file, delimiter=','))
 
 features = []
