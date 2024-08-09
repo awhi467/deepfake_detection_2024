@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 import csv
 
 # Open and read the .csv file and convert data to a list
-with open('tacotron2_BN_mag_ph_moments_vowels.csv', mode='r', encoding='utf-8') as file:
+with open('evalues2.csv', mode='r', encoding='utf-8') as file:
     data = list(csv.reader(file, delimiter=','))
 data = data[1:]
 
