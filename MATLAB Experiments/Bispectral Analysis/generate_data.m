@@ -1,4 +1,4 @@
-    clear;
+clear;
 addpath('functions');
 addpath('phase_unwrap')
 addpath('hosa_toolbox')
@@ -12,72 +12,84 @@ addpath('..\Speech samples\LJ_synthetic')
 addpath('..\Speech samples\LJ_natural')
 
 % Specify directory of .wav files
-path_in = ['..\Speech samples\LJ_natural'];
-is_synthetic = 0;       % 0 for natural, 1 for synthetic
+path_in = ['..\Speech samples\LJ_synthetic'];
 wav_files = dir(strcat(path_in,'\*.wav'));
-% Specify output directory
-path_out = 'feature_data';
-% Params
+
+% Params 
 nlag = 25;
-nsamp = 256;
+nsamp = 512;
 overlap = 50;
-nfft = 256;
-wind = hamming(nfft+1);
+nfft = 512;
+wind = hamming(nfft);
 fs= 22050;
 
 % Define pre-emphasis filter
 pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
-fa = [];
-fb = [];
+
+f_ax128 = [];
+f_rad32 = [];
+f_rad64 = [];
+f_rad128 = [];
+f_moments = [];
+
 % Loop through .wav files and compute features
 for i=1:size(wav_files,1)
-    % Read file and pre-emphasise
+
+    % Print filename
     disp(wav_files(i).name)
+
+    % Read file and pre-emphasise
     [s,fs] = audioread(wav_files(i).name);
     s = lsim(pe,s);
+
+    % Peak normalisation - normalise max value to 1
+    maxs = max(abs(s));
+    s = s/maxs;
+
     % Bispectrum and skewness
     [B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);
     [sk,axis] = bicoher(s,nfft,wind,nsamp,overlap);
-    % Complex bicepstrum
-    Blog = log(abs(sk)) + 1j*phase_unwrap(angle(B));
-    b = ifft2(Blog);
-    b(1,1)=b(1,1)/3;
-    % Compute linear and nonlinear complex bicepstrum
-    bL = zeros(nfft);
-    bL(1,:) = b(1,:);
-    bL(:,1) = b(:,1);
-    bL(1:nfft+1:end) = diag(b);
-    bN = b - bL;
-    bH = b(1,:);
-    % Compute linear and nonlinear bispectrum
-    BL = exp(fft2(bL));
-    BN = exp(fft2(bN));
-    BL = process(BL,nfft);
-    BN = process(BN,nfft);
+    B=sk;
+
+    % Normalise
+    B = (B-min(B(:)))/(max(B(:))-min(B(:)));
+    %sk = (sk-min(sk(:)))/(max(sk(:))-min(sk(:)));
+    %B = sk;
+
+    % Principal domain
+    Bp = B(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
+    skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
+
+    % Axial integral - limits right?
+    ax128 = trapz(Bp,1);
+
+    % Radial integral (need to test)
+    rad32 = compute_radial_integral(Bp,nfft,64);
+    rad64 = compute_radial_integral(Bp,nfft,128);
+    rad128 = compute_radial_integral(Bp,nfft,256);
     
-    %B = process(B,nfft);
-    %writematrix(B,strcat(path_out,'\B_', erase(wav_files(i).name, '.wav'),'.csv'))
-    %sk = process(sk,nfft);
-    %writematrix(sk,strcat(path_out,'\sk_', erase(wav_files(i).name, '.wav'),'.csv'))
     % Compute the first four statistical moments of mag/phase
-    B_mag = abs(BN);     %or abs(B)
-    B_ph = angle(BN);
+    B_mag = abs(B);     %or abs(B)
+    B_ph = angle(B);
     [B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4] = compute_moments(B_mag);
     [B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4] = compute_moments(B_ph);
-    % Define feature vector
-    %fa = [fa; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
-    [rad,ax] = integration_measures(B);
-    fa = [fa;abs(rad)];
-    ax = sum(reshape(ax, 256, 1),2)';
-    fb = [fb;abs(ax)];
+    
+    % Define feature vectors
+    f_moments = [f_moments; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
+    f_rad32 = [f_rad32;abs(rad32)];
+    f_rad64 = [f_rad64;abs(rad64)];
+    f_rad128 = [f_rad128;abs(rad128)];
+    f_ax128 = [f_ax128;abs(ax128)];
     
 end
+
 % Reduce the size to the first quadrant, normalise magnitudes
 function y = process(x,nfft)
     y = x(nfft/2:end, nfft/2:end);
     [min,max] = bounds(abs(y(:)));
     y = (y-min)/(max-min);
 end
+
 % Compute the first four statistical moments
 function [m1,m2,m3,m4] = compute_moments(B)
     m1 = mean(B(:));
@@ -85,38 +97,74 @@ function [m1,m2,m3,m4] = compute_moments(B)
     m3 = skewness(B(:));
     m4 = kurtosis(B(:));
 end
+
+% Compute the radial integral
+function rad = compute_radial_integral(B,nfft,rad_points)
+    alpha = linspace(0,1,rad_points);
+    for j=1:rad_points
+        Bnew = interpolate(B,alpha(j));
+        rad(j) = 0;
+        for k=1:nfft/2
+            rad(j) = rad(j)+Bnew(k);
+        end
+    end
+end
+
+
 % Radial and axial integrals, computed over the principal domain
-function [rad, ax] = integration_measures(B)
-    [m,n] = size(B);
-    i = 1:m;
-    j = 1:n;
-    [Bf1,Bf2] = meshgrid(i,j);
+%function [rad, ax] = integration_measures(B,nfft,rad_points)
     
-    % Define the principal domain
-    % Assuming principal domain is a triangular region where k1 + k2 <= pi
-    principal_mask = (Bf1>=0) & (Bf2>=0) & (Bf2<=Bf1);
-    
-    % Mask the bispectrum to keep only the principal domain
-    B_principal = B .* principal_mask;
-    
-    % Perform axial integration over k2 for each k1
-    axial_integration = trapz(i, B_principal, 2);
-    
+
+%OLD RADIAL INTEGRAL _ WORKED WELL
     % Convert to polar coordinates
-    [Theta, R] = cart2pol(Bf1, Bf2);
+    %[Theta, R] = cart2pol(Bf1, Bf2);
     
     % Define radial bins
-    num_bins = 41;  % Adjust the number of bins as necessary
-    r_max = max(R(:));
-    radial_bins = linspace(0, r_max, num_bins);
-    radial_values = zeros(1, num_bins-1);
+    %num_bins = 41;  % Adjust the number of bins as necessary
+    %r_max = max(R(:));
+    %radial_bins = linspace(0, r_max, num_bins);
+    %radial_values = zeros(1, num_bins-1);
     
     % Perform radial integration
-    for i = 1:num_bins-1
-        radial_mask = (R >= radial_bins(i) & R < radial_bins(i+1));
-        B_radial = B_principal .* radial_mask;
-        radial_values(i) = sum(B_radial(:));
-    end
-    rad = radial_values;
-    ax = axial_integration';
+    %for i = 1:num_bins-1
+    %    radial_mask = (R >= radial_bins(i) & R < radial_bins(i+1));
+    %    B_radial = Bp .* radial_mask;
+    %    radial_values(i) = sum(B_radial(:));
+    %end
+    %rad = radial_values;
+    %rad = Ir;
+    %ax = Ia;
+%end
+
+% Interpolation for the radial integral
+% B(k,ak) = pB(k,ceil(ak))+(1-p)B(k,floor(ak))
+function Brad = interpolate(B,alpha)
+    [K1,K2] = size(B);
+    k1 = 1:K1;
+    k2 = 1:K2;
+    p = alpha*k1-floor(alpha*k1);
+    index1 = ceil(alpha*k1);
+    index2 = floor(alpha*k1);
+    index1(index1==0)=1;
+    index2(index2==0)=1;
+    Brad = p*B(k1,index1)+(1-p)*B(k1,index2);
 end
+
+    % Complex bicepstrum
+    %Blog = log(abs(sk)) + 1j*phase_unwrap(angle(B));
+    %b = ifft2(Blog);
+    %b(1,1)=b(1,1)/3;
+
+    % Compute linear and nonlinear complex bicepstrum
+    %bL = zeros(nfft);
+    %bL(1,:) = b(1,:);
+    %bL(:,1) = b(:,1);
+    %bL(1:nfft+1:end) = diag(b);
+    %bN = b - bL;
+    %bH = b(1,:);
+
+    % Compute linear and nonlinear bispectrum
+    %BL = exp(fft2(bL));
+    %BN = exp(fft2(bN));
+    %BL = process(BL,nfft);
+    %BN = process(BN,nfft);
