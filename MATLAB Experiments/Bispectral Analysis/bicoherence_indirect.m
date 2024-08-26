@@ -29,6 +29,7 @@ nsamp = 256;
 overlap = 50;
 nfft = 256;
 wind = hamming(nfft+1);
+%s=2*s;
 
 % Bispectrum calculation
 [B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);

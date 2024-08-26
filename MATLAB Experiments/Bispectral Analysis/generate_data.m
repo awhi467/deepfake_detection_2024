@@ -17,9 +17,9 @@ wav_files = dir(strcat(path_in,'\*.wav'));
 
 % Params 
 nlag = 25;
-nsamp = 2048;
+nsamp = 512;
 overlap = 50;
-nfft = 2048;
+nfft = 512;
 wind = hamming(nfft);
 fs= 22050;
 
@@ -42,17 +42,14 @@ for i=1:size(wav_files,1)
     [s,fs] = audioread(wav_files(i).name);
     s = lsim(pe,s);
 
-    % Peak normalisation - normalise max value to 1
-    maxs = max(abs(s));
-    %s = s/maxs;
-
-    % Bispectrum and skewness
-    %[B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);
-    [B,axis] = bicoher(s,nfft,wind,nsamp,overlap);
+    % Skewness
+    %[B,axis] = bicoher(s,nfft,wind,nsamp,overlap);
+    
+    % Bicoherence
+    [B,axis] = bicoherence_modified(s,nfft,wind,nsamp,overlap);
 
     % Normalise
-    B = normalise(B);
-    %sk = normalise(sk);
+    %B = energy_normalise(B);
 
     % Principal domain
     Bp = B(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
@@ -167,7 +164,7 @@ end
     %BL = process(BL,nfft);
     %BN = process(BN,nfft);
 
-function Bn = normalise(B)
+function Bn = energy_normalise(B)
     absB = abs(B);
     vol = sum(absB(:));
     Bn = B/vol;
