@@ -17,20 +17,19 @@ wav_files = dir(strcat(path_in,'\*.wav'));
 
 % Params 
 nlag = 25;
-nsamp = 512;
+nsamp = 1024;
 overlap = 50;
-nfft = 512;
+nfft = 1024;
 wind = hamming(nfft);
 fs= 22050;
 
 % Define pre-emphasis filter
 pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
 
-f_ax128 = [];
-f_rad32 = [];
-f_rad64 = [];
-f_rad128 = [];
-f_moments = [];
+f_bic_ax = [];
+f_sk_ax = [];
+f_bic_rad = [];
+f_sk_rad = [];
 
 % Loop through .wav files and compute features
 for i=1:size(wav_files,1)
@@ -41,40 +40,34 @@ for i=1:size(wav_files,1)
     % Read file and pre-emphasise
     [s,fs] = audioread(wav_files(i).name);
     s = lsim(pe,s);
-
-    % Skewness
-    %[B,axis] = bicoher(s,nfft,wind,nsamp,overlap);
     
     % Bicoherence
-    [B,axis] = bicoherence_modified(s,nfft,wind,nsamp,overlap);
-
-    % Normalise
-    %B = energy_normalise(B);
+    [sk,bic,axis] = bicoherence_modified(s,nfft,wind,nsamp,overlap);
 
     % Principal domain
-    Bp = B(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
-    %skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
+    bicp = bic(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
+    skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
 
     % Axial integral - limits right?
-    ax128 = trapz(Bp,1);
+    bic_ax = trapz(bicp,1);
+    sk_ax = trapz(skp,1);
 
     % Radial integral (need to test)
-    rad32 = compute_radial_integral(Bp,nfft,64);
-    rad64 = compute_radial_integral(Bp,nfft,128);
-    rad128 = compute_radial_integral(Bp,nfft,256);
+    bic_rad = compute_radial_integral(bicp,nfft,nfft/2);
+    sk_rad = compute_radial_integral(skp,nfft,nfft/2);
     
     % Compute the first four statistical moments of mag/phase
-    B_mag = abs(B);     %or abs(B)
-    B_ph = angle(B);
-    [B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4] = compute_moments(B_mag);
-    [B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4] = compute_moments(B_ph);
+    %B_mag = abs(bic);     %or abs(B)
+    %B_ph = angle(bic);
+    %[B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4] = compute_moments(B_mag);
+    %[B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4] = compute_moments(B_ph);
     
     % Define feature vectors
-    f_moments = [f_moments; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
-    f_rad32 = [f_rad32;abs(rad32)];
-    f_rad64 = [f_rad64;abs(rad64)];
-    f_rad128 = [f_rad128;abs(rad128)];
-    f_ax128 = [f_ax128;abs(ax128)];
+    %f_moments = [f_moments; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
+    f_bic_ax = [f_bic_ax;abs(bic_ax)];
+    f_sk_ax = [f_sk_ax;abs(sk_ax)];
+    f_bic_rad = [f_bic_rad;abs(bic_rad)];
+    f_sk_rad = [f_sk_rad;abs(sk_rad)];
     
 end
 

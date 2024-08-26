@@ -1,4 +1,4 @@
-function [bic,waxis] = bicoher (y,  nfft, wind, nsamp, overlap)
+function [sk,bic,waxis] = bicoherence_modified (y,  nfft, wind, nsamp, overlap)
 %BICOHER - Direct (FD) method for estimating bicoherence
 %	[bic,waxis] = bicoher (y,  nfft, wind, segsamp, overlap)
 %	y     - data vector or time-series
@@ -30,6 +30,14 @@ function [bic,waxis] = bicoher (y,  nfft, wind, nsamp, overlap)
 %
 %  This material may be reproduced by or for the U.S. Government pursuant
 %  to the copyright license under the clause at DFARS 252.227-7013.
+
+
+% MODIFICATIONS by A. White 27/08/2024
+% Edited code to compute the skewness function
+% sk(f1,f2)=|E[B(f1,f2)]|^2/(E[S(f1)]E[S(f2)]E[S(f1+f2)]) which is
+% previously called the estimated bicoherence, as well as the bicoherence
+% defined as bic(f1,f2)=|E[B(f1,f2)]|^2/(E[S(f1)S(f2)]E[S(f1+f2)]). Note
+% the difference in the expectation operations in the denominator.
 
 
 % --------------------- parameter checks -----------------------------
@@ -66,6 +74,7 @@ function [bic,waxis] = bicoher (y,  nfft, wind, nsamp, overlap)
 % ---------------- accumulate triple products ----------------------
 
     bic  = zeros(nfft,nfft);
+    sk  = zeros(nfft,nfft);    %added
     Pyy  = zeros(nfft,1);
     P12  = zeros(nfft,nfft);   %added
 
@@ -81,16 +90,18 @@ function [bic,waxis] = bicoher (y,  nfft, wind, nsamp, overlap)
 	Pyy     = Pyy + Yf .* CYf;
         Yf12(:) = CYf(mask);
         bic = bic + (Yf * Yf.') .* Yf12;
-        P12 = P12 + (abs(Yf * Yf.'))^2;
+        P12 = P12 + (abs(Yf * Yf.'))^2;     %added
 
         ind = ind + nadvance;
     end
 
     bic     = bic / nrecs;
+    sk = bic;   %added
     Pyy     = Pyy  / nrecs;
-    P12     = P12  / nrecs;
+    P12     = P12  / nrecs;   %added
     %mask(:) = Pyy(mask);
-    bic = abs(bic).^2 ./ (P12 .* Pyy(mask));
+    bic = abs(bic).^2 ./ (P12 .* Pyy(mask));     %added
+    sk = abs(bic).^2 ./ (Pyy * Pyy.' .* Pyy(mask));   %added
     bic = fftshift(bic) ;
 
 % ------------ contout plot of magnitude bispectum --------------------
