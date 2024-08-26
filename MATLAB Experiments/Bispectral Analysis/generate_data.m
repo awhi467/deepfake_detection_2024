@@ -12,14 +12,14 @@ addpath('..\Speech samples\LJ_synthetic')
 addpath('..\Speech samples\LJ_natural')
 
 % Specify directory of .wav files
-path_in = ['..\Speech samples\LJ_synthetic'];
+path_in = ['..\Speech samples\LJ_natural'];
 wav_files = dir(strcat(path_in,'\*.wav'));
 
 % Params 
 nlag = 25;
-nsamp = 512;
+nsamp = 2048;
 overlap = 50;
-nfft = 512;
+nfft = 2048;
 wind = hamming(nfft);
 fs= 22050;
 
@@ -44,21 +44,19 @@ for i=1:size(wav_files,1)
 
     % Peak normalisation - normalise max value to 1
     maxs = max(abs(s));
-    s = s/maxs;
+    %s = s/maxs;
 
     % Bispectrum and skewness
-    [B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);
-    [sk,axis] = bicoher(s,nfft,wind,nsamp,overlap);
-    B=sk;
+    %[B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);
+    [B,axis] = bicoher(s,nfft,wind,nsamp,overlap);
 
     % Normalise
-    B = (B-min(B(:)))/(max(B(:))-min(B(:)));
-    %sk = (sk-min(sk(:)))/(max(sk(:))-min(sk(:)));
-    %B = sk;
+    B = normalise(B);
+    %sk = normalise(sk);
 
     % Principal domain
     Bp = B(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
-    skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
+    %skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
 
     % Axial integral - limits right?
     ax128 = trapz(Bp,1);
@@ -168,3 +166,9 @@ end
     %BN = exp(fft2(bN));
     %BL = process(BL,nfft);
     %BN = process(BN,nfft);
+
+function Bn = normalise(B)
+    absB = abs(B);
+    vol = sum(absB(:));
+    Bn = B/vol;
+end
