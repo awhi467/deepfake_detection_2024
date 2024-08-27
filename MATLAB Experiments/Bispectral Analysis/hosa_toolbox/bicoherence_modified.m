@@ -96,13 +96,13 @@ function [sk,bic,waxis] = bicoherence_modified (y,  nfft, wind, nsamp, overlap)
     end
 
     bic     = bic / nrecs;
-    sk = bic;   %added
     Pyy     = Pyy  / nrecs;
     P12     = P12  / nrecs;   %added
-    %mask(:) = Pyy(mask);
-    bic = abs(bic).^2 ./ (P12 .* Pyy(mask));     %added
+    
     sk = abs(bic).^2 ./ (Pyy * Pyy.' .* Pyy(mask));   %added
-    bic = fftshift(bic) ;
+    bic = abs(bic).^2 ./ (P12 .* Pyy(mask));     %added
+    sk = fftshift(sk);
+    bic = fftshift(bic);
 
 % ------------ contout plot of magnitude bispectum --------------------
 
