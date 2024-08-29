@@ -23,9 +23,9 @@ synthetic_wavs = dir(strcat(synthetic_path,'\*.wav'));
 
 % Params 
 nlag = 25;
-nsamp = 256;
+nsamp = 32 ;
 overlap = 50;
-nfft = 256;
+nfft = 32;
 wind = hamming(nfft);
 fs= 22050;
 
@@ -132,27 +132,24 @@ function Bn = energy_normalise(B)
     Bn = B/vol;
 end
 
+function [BL,BN] = cepstum_factorise(B)
     % Complex bicepstrum
-    %Blog = log(abs(sk)) + 1j*phase_unwrap(angle(B));
-    %b = ifft2(Blog);
-    %b(1,1)=b(1,1)/3;
+    Blog = log(abs(sk)) + 1j*phase_unwrap(angle(B));
+    b = ifft2(Blog);
 
     % Compute linear and nonlinear complex bicepstrum
-    %bL = zeros(nfft);
-    %bL(1,:) = b(1,:);
-    %bL(:,1) = b(:,1);
-    %bL(1:nfft+1:end) = diag(b);
-    %bN = b - bL;
-    %bH = b(1,:);
+    bL = zeros(nfft);
+    bL(1,:) = b(1,:);
+    bL(:,1) = b(:,1);
+    bL(1:nfft+1:end) = diag(b);
+    bN = b - bL;
+    bH = b(1,:);
 
     % Compute linear and nonlinear bispectrum
-    %BL = exp(fft2(bL));
-    %BN = exp(fft2(bN));
-    %BL = process(BL,nfft);
-    %BN = process(BN,nfft);
-    
-    % Radial and axial integrals, computed over the principal domain
-%function [rad, ax] = integration_measures(B,nfft,rad_points)
+    BL = exp(fft2(bL));
+    BN = exp(fft2(bN));
+
+end
     
 
 %OLD RADIAL INTEGRAL _ WORKED WELL

@@ -8,15 +8,19 @@ addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Isabella');
 addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Nick');
 addpath('..\Speech samples\fs2')
 addpath('..\Speech samples\')
+addpath('..\Speech samples\LJ_natural')
+addpath('..\Speech samples\LJ_synthetic')
 
 % Read audio files
-number = '03';
-filename = ['NaturalNick', number, '.wav'];
+number = '319';
+%filename = ['NaturalNick', number, '.wav'];
 %filename = [number, '_logs-150-Nick-Base.wav'];
 %filename = ['NaturalIsabella', number, '.wav'];
 %filename = [number, '_logs-150-Isabella-Reference-Base.wav'];
 %filename = 'fs2_test.wav';
 %filename = 'peter_test1.wav';
+filename = [number,'.wav'];
+filename = "LJ002-0119.wav"
 [s, fs] = audioread(filename);
 
 % Pre-emphasise
@@ -35,18 +39,10 @@ wind = hamming(nfft+1);
 [B,axis] = bispeci(s,nlag,nsamp,overlap,'unbiased',nfft,wind);
 
 % Skewness function
-sk = bicoher(s,nfft,wind,nsamp,overlap);
-skn = (sk-min(sk(:)))/(max(sk(:))-min(sk(:)));
-writematrix(skn, 'skn.csv')
-
-%sk = (abs(B))^2/(P*transpose(P))
-
-% Normalisation
-[minB,maxB] = bounds(abs(B(:)));
-B = (B-minB)/(minB-maxB);
+[sk,bic,axis] = bicoherence_modified(s,nfft,wind,nsamp,overlap);
 
 % Complex bicepstrum
-Blog = log(abs(B)) + 1j*phase_unwrap(angle(B));
+Blog = log(abs(bic)) + 1j*phase_unwrap(angle(B));
 b = ifft2(Blog);
 b(1,1)=b(1,1)/3;
 
@@ -66,15 +62,13 @@ BN = exp(fft2(bN));
 H = exp(fft(bH));
 H = H(nfft/2:end);
 
-abs(mean(B(:)))
-abs(mean(BL(:)))
-abs(mean(BN(:)))
+% Principal domain
+bicp = bic(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
+skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
 
-% Extract magnitudes of high freq. part
-BN_hf = [];
-[i, j] = meshgrid(1:nfft, 1:nfft);
-cond = (i + j <= nfft/2);
-BN_hf = abs(BN(cond));
+%Integrated bicoherence
+ax = trapz(bicp,1);
+rad = compute_radial_integral(bicp,nfft,nfft/2);
 
 %--------------------------------Plots--------------------------------
 
@@ -90,17 +84,15 @@ figure(2)
 subplot(1,2,1)
 image(flipud(abs(B)),'CDataMapping','scaled')
 colormap(flipud(gray))
-title('Bicoherence magnitude')
+title('Bispectrum magnitude')
 xlabel('f_1 (kHz)')
 ylabel('f_2 (kHz)')
 subplot(1,2,2)
 image(flipud(phase_unwrap(angle(B))),'CDataMapping','scaled')
 colormap(flipud(gray))
-title('Bicoherence phase')
+title('Bispectrum phase')
 xlabel('f_1 (kHz)')
 ylabel('f_2 (kHz)')
-%xlim([-fs/2000,fs/2000])
-%ylim([-fs/2000,fs/2000])
 
 figure(3)
 subplot(2,2,1)
@@ -128,10 +120,66 @@ b = fftshift(b);
 image(flipud(hz2mel(abs(b))),'CDataMapping','scaled')
 colormap(flipud(gray))
 
-figure(6)
-histogram(BN_hf,100)
+ticks = [1,64,128,192,256];
+xlabels = {'-0.5','-0.25','0','0.25','0.5'};
+ylabels = {'0.5','0.25','0','-0.25','-0.5'};
 
 figure(7)
-image(flipud(abs(sk)),'CDataMapping','scaled')
+image(flipud(bicp),'CDataMapping','scaled')
 colormap(flipud(gray))
-title('Bicoherence')
+xticks(ticks)
+xticklabels(xlabels)
+yticks(ticks)
+yticklabels(ylabels)
+xlabel('f_1')
+ylabel('f_2')
+title("Bicoherence")
+
+figure(8)
+image(flipud(skp),'CDataMapping','scaled')
+colormap(flipud(gray))
+xticks(ticks)
+xticklabels(xlabels)
+yticks(ticks)
+yticklabels(ylabels)
+xlabel('f_1')
+ylabel('f_2')
+title("Skewness")
+
+figure(9)
+plot(ax)
+title('Axial integral - bicoherence')
+xlabel('f_1')
+ylabel('I_A(f_1)')
+
+figure(10)
+plot(rad)
+title('Radial integral - bicoherence')
+xlabel('\alpha')
+ylabel('I_R(\alpha)')
+
+% Compute the radial integral
+function rad = compute_radial_integral(B,nfft,rad_points)
+    alpha = linspace(0,1,rad_points);
+    for j=1:rad_points
+        Bnew = interpolate(B,alpha(j));
+        rad(j) = 0;
+        for k=1:nfft/2
+            rad(j) = rad(j)+Bnew(k);
+        end
+    end
+end
+
+% Interpolation for the radial integral
+% B(k,ak) = pB(k,ceil(ak))+(1-p)B(k,floor(ak))
+function Brad = interpolate(B,alpha)
+    [K1,K2] = size(B);
+    k1 = 1:K1;
+    k2 = 1:K2;
+    p = alpha*k1-floor(alpha*k1);
+    index1 = ceil(alpha*k1);
+    index2 = floor(alpha*k1);
+    index1(index1==0)=1;
+    index2(index2==0)=1;
+    Brad = p*B(k1,index1)+(1-p)*B(k1,index2);
+end
