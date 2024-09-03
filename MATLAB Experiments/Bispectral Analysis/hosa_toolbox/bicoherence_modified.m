@@ -1,4 +1,4 @@
-function [sk,bic,waxis] = bicoherence_modified (y,  nfft, wind, nsamp, overlap)
+function [B,sk,bic,waxis] = bicoherence_modified (y,  nfft, wind, nsamp, overlap)
 %BICOHER - Direct (FD) method for estimating bicoherence
 %	[bic,waxis] = bicoher (y,  nfft, wind, segsamp, overlap)
 %	y     - data vector or time-series
@@ -74,6 +74,7 @@ function [sk,bic,waxis] = bicoherence_modified (y,  nfft, wind, nsamp, overlap)
 % ---------------- accumulate triple products ----------------------
 
     bic  = zeros(nfft,nfft);
+    B  = zeros(nfft,nfft);
     sk  = zeros(nfft,nfft);    %added
     Pyy  = zeros(nfft,1);
     P12  = zeros(nfft,nfft);   %added
@@ -89,20 +90,21 @@ function [sk,bic,waxis] = bicoherence_modified (y,  nfft, wind, nsamp, overlap)
         CYf     = conj(Yf);
 	Pyy     = Pyy + Yf .* CYf;
         Yf12(:) = CYf(mask);
-        bic = bic + (Yf * Yf.') .* Yf12;
+        B = B + (Yf * Yf.') .* Yf12;
         P12 = P12 + (abs(Yf * Yf.'))^2;     %added
 
         ind = ind + nadvance;
     end
 
-    bic     = bic / nrecs;
+    B     = B / nrecs;
     Pyy     = Pyy  / nrecs;
     P12     = P12  / nrecs;   %added
     
-    sk = abs(bic).^2 ./ (Pyy * Pyy.' .* Pyy(mask));   %added
-    bic = abs(bic).^2 ./ (P12 .* Pyy(mask));     %added
+    sk = abs(B).^2 ./ (Pyy * Pyy.' .* Pyy(mask));   %added
+    bic = abs(B).^2 ./ (P12 .* Pyy(mask));     %added
     sk = fftshift(sk);
     bic = fftshift(bic);
+    B = fftshift(B);
 
 % ------------ contout plot of magnitude bispectum --------------------
 

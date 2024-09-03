@@ -23,9 +23,9 @@ synthetic_wavs = dir(strcat(synthetic_path,'\*.wav'));
 
 % Params 
 nlag = 25;
-nsamp = 32 ;
+nsamp = 256;
 overlap = 50;
-nfft = 32;
+nfft = 256;
 wind = hamming(nfft);
 fs= 22050;
 
@@ -61,7 +61,11 @@ for is_synthetic=0:1
         s = lsim(pe,s);
 
         % Bicoherence and skewness
-        [sk,bic,axis] = bicoherence_modified(s,nfft,wind,nsamp,overlap);
+        [B,sk,bic,axis] = bicoherence_modified(s,nfft,wind,nsamp,overlap);
+        
+        cbic = sqrt(bic) .* exp(1j*angle(B));
+        %[bicl,bic] = cepstrum_factorise(cbic,nfft);
+        bic = cbic;
 
         % Principal domain
         bicp = bic(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
@@ -132,9 +136,9 @@ function Bn = energy_normalise(B)
     Bn = B/vol;
 end
 
-function [BL,BN] = cepstum_factorise(B)
+function [BL,BN] = cepstrum_factorise(B,nfft)
     % Complex bicepstrum
-    Blog = log(abs(sk)) + 1j*phase_unwrap(angle(B));
+    Blog = log(abs(B)) + 1j*phase_unwrap(angle(B));
     b = ifft2(Blog);
 
     % Compute linear and nonlinear complex bicepstrum

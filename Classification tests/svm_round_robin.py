@@ -2,18 +2,19 @@ from sklearn import svm, metrics
 from sklearn.model_selection import train_test_split, KFold
 import csv
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Open and read the .csv file and convert data to a list
-with open('ljspeech_sk32_rad.csv', mode='r', encoding='utf-8') as file:
+with open('ljspeech_cbic256_ax.csv', mode='r', encoding='utf-8') as file:
     data = list(csv.reader(file, delimiter=','))
 data = data[1:]
 
 features = []
 targets = []
 
+# Extract data from csv data
 for row in data:
-    current_features = row[1:]
-    [float(feature) for feature in current_features]
+    current_features = [float(feature) for feature in row[1:]]
     current_target = float(row[0])
     features.append(current_features)
     targets.append(current_target)
@@ -25,56 +26,58 @@ kf = KFold(n_splits=5, shuffle=True, random_state=42)
 accuracy_scores = []
 precision_scores = []
 recall_scores = []
+fpr_list = []
+tpr_list = []
+roc_auc_list = []
 
 for train_index, test_index in kf.split(features):
-    X_train = []
-    y_train = []
-    X_test = []
-    y_test = []
-
-    for i in train_index:
-        X_train.append(features[i])
-        y_train.append(targets[i])
-
-    for i in test_index:
-        X_test.append(features[i])
-        y_test.append(targets[i])
-
-    #X_train, X_test = features[train_index], features[test_index]
-    #y_train, y_test = targets[train_index], targets[test_index]
+    X_train = [features[i] for i in train_index]
+    y_train = [targets[i] for i in train_index]
+    X_test = [features[i] for i in test_index]
+    y_test = [targets[i] for i in test_index]
     
-    # Create a SVM Classifier with RBF kernel
-    clf = svm.SVC(kernel='rbf')
+    # Create a SVM Classifier with RBF kernel and probability estimates enabled
+    clf = svm.SVC(kernel='rbf', probability=True)
     
     # Train the model using the training sets
     clf.fit(X_train, y_train)
     
     # Predict the response for test dataset
     y_pred = clf.predict(X_test)
+    y_pred_proba = clf.predict_proba(X_test)[:, 1]  # Get probability estimates
     
     # Calculate metrics for the current fold
     accuracy_scores.append(metrics.accuracy_score(y_test, y_pred))
     precision_scores.append(metrics.precision_score(y_test, y_pred))
     recall_scores.append(metrics.recall_score(y_test, y_pred))
+    
+    # Compute ROC curve and ROC area for this fold
+    fpr, tpr, _ = metrics.roc_curve(y_test, y_pred_proba)
+    roc_auc = metrics.auc(fpr, tpr)
+    
+    fpr_list.append(fpr)
+    tpr_list.append(tpr)
+    roc_auc_list.append(roc_auc)
 
 # Calculate and print average metrics across all folds
 print("Average Accuracy:", np.mean(accuracy_scores))
 print("Average Precision:", np.mean(precision_scores))
 print("Average Recall:", np.mean(recall_scores))
+print("Average ROC AUC:", np.mean(roc_auc_list))
 
-# Note: To evaluate the final model on a separate test set, you can use the following code:
-
-# Split dataset into training set and test set (adjust test_size as needed)
-X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=42)
-
-# Train the model using the entire training set
-clf_final = svm.SVC(kernel='rbf')
-clf_final.fit(X_train, y_train)
-
-# Predict the response for test dataset
-y_pred_final = clf_final.predict(X_test)
-
-# Calculate and print metrics on the test set
-print("\nTest Accuracy:", metrics.accuracy_score(y_test, y_pred_final))
-print("Test Precision:", metrics.precision_score(y_test, y_pred_final))
-print("Test Recall:", metrics.recall_score(y_test, y_pred_final))
+# Plot the ROC curve for the last fold
+print("fpr")
+print(fpr_list[-1])
+print("tpr")
+print(tpr_list[-1])
+plt.figure()
+plt.plot(fpr_list[-1], tpr_list[-1], color='darkorange',
+         lw=2, label='ROC curve (area = %0.2f)' % roc_auc_list[-1])
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic')
+plt.legend(loc="lower right")
+plt.show()
