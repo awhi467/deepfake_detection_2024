@@ -14,11 +14,13 @@ addpath('..\Speech samples\fs2')
 addpath('..\Speech samples\')
 addpath('..\Speech samples\LJ_synthetic')
 addpath('..\Speech samples\LJ_natural')
+addpath('..\Speech samples\pk_synthetic')
+addpath('..\Speech samples\pk_natural')
 
 % Specify directory of .wav files
-natural_path = '..\Speech samples\LJ_natural';
+natural_path = '..\Speech samples\pk_natural';
 natural_wavs = dir(strcat(natural_path,'\*.wav'));
-synthetic_path = '..\Speech samples\LJ_synthetic';
+synthetic_path = '..\Speech samples\pk_synthetic';
 synthetic_wavs = dir(strcat(synthetic_path,'\*.wav'));
 
 % Params 
@@ -26,7 +28,7 @@ nlag = 25;
 nsamp = 256;
 overlap = 50;
 nfft = 256;
-wind = hamming(nfft);
+wind = hamming(nsamp);
 fs= 22050;
 
 % Define pre-emphasis filter
@@ -71,6 +73,17 @@ for is_synthetic=0:1
         bicp = bic(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
         skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
 
+        % Save bispectrum to csv file (2D feature classification)
+        if is_synthetic
+            writematrix(abs(skp), strcat('cnn_data\synthetic\sk256_', string(i), '.csv'));
+            writematrix(abs(bicp), strcat('cnn_data\synthetic\bic256_', string(i), '.csv'));
+        else
+            writematrix(abs(skp), strcat('cnn_data\real\sk256_', string(i), '.csv'));
+            writematrix(abs(bicp), strcat('cnn_data\real\bic256_', string(i), '.csv'));
+        end
+
+        %{
+
         % Axial integral 
         bic_ax = trapz(bicp,1);
         sk_ax = trapz(skp,1);
@@ -91,6 +104,7 @@ for is_synthetic=0:1
         f_sk_ax = [f_sk_ax;is_synthetic,abs(sk_ax)];
         f_bic_rad = [f_bic_rad;is_synthetic,abs(bic_rad)];
         f_sk_rad = [f_sk_rad;is_synthetic,abs(sk_rad)];
+        %}
 
     end
 end

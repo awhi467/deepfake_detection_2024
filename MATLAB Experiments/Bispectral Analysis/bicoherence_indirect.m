@@ -20,7 +20,7 @@ number = '319';
 %filename = 'fs2_test.wav';
 %filename = 'peter_test1.wav';
 filename = [number,'.wav'];
-filename = "LJ002-0119.wav"
+filename = "LJ002-0118.wav"
 [s, fs] = audioread(filename);
 
 % Pre-emphasise
@@ -124,6 +124,10 @@ ticks = [1,64,128,192,256];
 xlabels = {'-0.5','-0.25','0','0.25','0.5'};
 ylabels = {'0.5','0.25','0','-0.25','-0.5'};
 
+ticks1 = [1,32,64,96,128];
+xlabels1 = {'0','0.125','0.25','0.375','0.5'};
+xlabels2 = {'0','0.25','0.5','0.75','1'};
+
 figure(7)
 image(flipud(bicp),'CDataMapping','scaled')
 colormap(flipud(gray))
@@ -136,7 +140,7 @@ ylabel('f_2')
 title("Bicoherence")
 
 figure(8)
-image(flipud(skp),'CDataMapping','scaled')
+image(flipud(abs(skp)),'CDataMapping','scaled')
 colormap(flipud(gray))
 xticks(ticks)
 xticklabels(xlabels)
@@ -147,16 +151,21 @@ ylabel('f_2')
 title("Skewness")
 
 figure(9)
-plot(ax)
-title('Axial integral - bicoherence')
+plot(ax,'k')
+%title('Axial integral - bicoherence')
 xlabel('f_1')
 ylabel('I_A(f_1)')
+xticks(ticks1)
+xticklabels(xlabels1)
 
 figure(10)
-plot(rad)
-title('Radial integral - bicoherence')
+plot(rad,'k')
+%title('Radial integral - bicoherence')
 xlabel('\alpha')
 ylabel('I_R(\alpha)')
+xticks(ticks1)
+xticklabels(xlabels2)
+
 
 % Compute the radial integral
 function rad = compute_radial_integral(B,nfft,rad_points)
