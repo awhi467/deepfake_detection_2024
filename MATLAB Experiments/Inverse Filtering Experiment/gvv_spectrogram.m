@@ -6,134 +6,81 @@ addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Isabella');
 addpath('..\Speech samples\Natural-Tacotron2-pairs\Tacotron 2\Nick');
 addpath('covarep\glottalsource\')
 addpath('myspectrogram\')
+addpath('covarep\glottalsource\')
+addpath('phase_unwrap\')
+addpath('speech')
 
 % Specify the filenames and start/duration of vowels
-%filename1 = 'NaturalNick06.wav';
-%filename2 = '06_logs-150-Nick-Base.wav';
-filename1 = 'NaturalIsabella04.wav';
-filename2 = '04_logs-150-Isabella-Reference-Base.wav';
+filename = 'NaturalNick07.wav';
+%filename = '07_logs-150-Nick-Base.wav';
+%filename = "..\Speech samples\odss\fastpitch-hifigan\hifi-tts\92\auntcretesemancipation_01_hill_0284.wav"
+%filename = "..\Speech samples\odss\natural\hifi-tts\92\auntcretesemancipation_01_hill_0284.wav"
 
 % Read the audio files and isolate the vowel sounds
-[s1 fs1] = audioread(filename1);
-[s2 fs2] = audioread(filename2);
+[s fs] = audioread(filename);
+%s = s(100000:300000);
 
-figure(100)
-subplot(2,1,1)
-plot(cumsum(s1));
-subplot(2,1,2)
-plot(cumsum(s2));
+% Downsample to 8k
+%s = downsample(s,2);
+%fs = 8000;
 
 % Pre-emphasize the speech
-pe = tf([1,-0.95],1,1/fs1,'Variable','z^-1')
-s_pe1 = lsim(pe,s1);
-s_pe2 = lsim(pe,s2);
+%pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
+%s = lsim(pe,s);
 
-% Determine LPC coefs of glottal filter, VT filter and lip radiation filter
-[gvvd1, gvvdd1, av1, ag1] = iaif(s_pe1,fs1);
-[gvvd2, gvvdd2, av2, ag2] = iaif(s_pe2,fs2);
-gvv1 = cumsum(gvvd1);
-gvv2 = cumsum(gvvd2);
+% Compute the GVV
+%iaif_ola(x,fs,winLen,winShift,p_vt,p_gl,d,hpfilt)
+gvv = iaif_ola(s,fs,200,10,18,16,0.99,1);
+s = s(1:length(gvv));
 
-vt1 = tf(1,av1,1/fs1,'Variable','z^-1');
-vt2 = tf(1,av2,1/fs2,'Variable','z^-1');
+map1 = colormap(slanCM('ice'));
+map2 = colormap(slanCM('amp'));
+cmap = [flipud(map1);flipud(map2)];
 
-data1 = fun_compute_bispectrum(gvv1,fs1,1024,50,'hann',1);
-data2 = fun_compute_bispectrum(gvv2,fs2,1024,50,'hann',1);
-gvv1_psd = data1.P;
-gvv2_psd = data2.P;
-f = data1.f;
-
-% Take half the plot, due to symmetry
-N = floor(size(gvv1_psd,1)/2);
-gvv1_psd = gvv1_psd(N+1:end);
-gvv2_psd = gvv2_psd(N+1:end);
-f = data1.f/1000;
-f = f(N+1:end);
-
+% Compute and display phase spectrograms
 figure(1)
-subplot(2,1,1)
-plot(s1)
-title('Natural Speech')
-xlabel('n')
-ylabel('s[n]')
-subplot(2,1,2)
-plot(s2)
-title('Synthetic Speech')
-xlabel('n')
-ylabel('s[n]')
+S_gvv = myphasespectrogram(gvv,fs,[25,5],'@blackman',2048,1,'gray',true,'per');
+title('GVV')
+xlabel('t (s)')
+ylabel('f (Hz)')
 
 figure(2)
-subplot(2,1,1)
-plot(gvv1)
-title('Natural GVV')
-xlabel('n')
-ylabel('u_G[n]')
-subplot(2,1,2)
-plot(gvv2)
-title('Synthetic GVV')
-xlabel('n')
-ylabel('u_G[n]')
+S_s = myphasespectrogram(s,fs,[25,5],'@blackman',2048,1,'gray',true,'per');
+title('Speech')
+xlabel('t (s)')
+ylabel('f (Hz)')
+
+% Spectrogram of the vocal tract phase response
+spectrogram_size = size(S_gvv);
+S_s = S_s(1:spectrogram_size(1),1:spectrogram_size(2));
+S_vt = mod(S_s - S_gvv + 2*pi,2*pi);
+S_vt = S_vt(1:1024,:)-pi;
 
 figure(3)
-subplot(2,1,1)
-plot(gvvd1)
-title('Natural GVV Derivative')
-xlabel('n')
-ylabel("u_G'[n]")
 subplot(2,1,2)
-plot(gvvd2)
-title('Synthetic GVV Derivative')
-xlabel('n')
-ylabel("u_G'[n]")
-
-plotoptions = bodeoptions;
-plotoptions.FreqScale = 'linear';
-plotoptions.MagScale = 'linear';
-plotoptions.FreqUnits = 'Hz';
-plotoptions.XLim = [0, 8000];
+myspectrogram(s,fs,[6,1],'@hamming',2048,[-45,-1],1,'default',true,'per');
+title("Power spectrogram")
+subplot(2,1,1)
+imagesc(flipud(S_vt))
+xlabel('t')
+ylabel('f')
+title("Phase spectrogram")
+colormap(gca,cmap)
+colorbar
+xticks(linspace(0,12000,7))
+xticklabels({'0','2','4','6','8','10','12'})
+yticks(linspace(1,1024,5));
+yticklabels({'8000','6000','4000','2000','0'})
 
 figure(4)
-subplot(2,1,1)
-bodemag(vt1, plotoptions)
-title('Vocal tract frequency response (Natural)')
-subplot(2,1,2)
-bodemag(vt2, plotoptions)
-title(title('Vocal tract frequency response (Synthetic)'))
-
-figure(5)
-myspectrogram(gvv1,fs1,[6,1],'@hamming',1024,[-45,-1],[1],'default',true,'per')
-title('GVV natural')
+myspectrogram(s,fs,[6,1],'@hamming',2048,[-45,-1],1,'default',true,'per');
 xlabel('t (s)')
 ylabel('f (Hz)')
+a = colorbar;
+a.Label.String = 'Power (dB)';
 
+% Time domain waveform
+n = 1:length(gvv);
 figure(6)
-myspectrogram(gvv2,fs2,[6,1],'@hamming',1024,[-45,-1],[1],'default',true,'per')
-title('GVV synthetic')
-xlabel('t (s)')
-ylabel('f (Hz)')
+plot(n,s,n,gvv)
 
-figure(7)
-myspectrogram(gvvd1,fs1,[6,1],'@hamming',1024,[-45,-1],[1],'default',true,'per')
-title('GVVD natural')
-xlabel('t (s)')
-ylabel('f (Hz)')
-
-figure(8)
-myspectrogram(gvvd2,fs2,[6,1],'@hamming',1024,[-45,-1],[1],'default',true,'per')
-title('GVVD synthetic')
-xlabel('t (s)')
-ylabel('f (Hz)')
-
-figure(9)
-subplot(2,1,1)
-histogram(s_pe1)
-title('Natural speech magnitude histogram')
-subplot(2,1,2)
-histogram(s_pe2)
-title('Synthetic speech magnitude histogram')
-
-figure(10)
-plot(f,10*log10(gvv1_psd),f,10*log10(gvv2_psd))
-title('GVV Power Spectral Density')
-xlabel('f (kHz)')
-ylabel('10*log(PSD)')

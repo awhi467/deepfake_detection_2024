@@ -36,8 +36,8 @@ def load_data(real_dir, synthetic_dir):
     return X, y
 
 # Define directories
-real_dir = 'cnn_data/real'
-synthetic_dir = 'cnn_data/synthetic'
+real_dir = 'odss1_cnn_data/real'
+synthetic_dir = 'odss1_cnn_data/synthetic'
 
 # Load data
 X, y = load_data(real_dir, synthetic_dir)

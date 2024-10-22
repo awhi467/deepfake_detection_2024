@@ -22,8 +22,8 @@ def load_csv_data(file_path):
     return features, targets
 
 # Load training and evaluation data
-train_features, train_targets = load_csv_data('ljspeech_bic256_ax.csv')
-test_features, test_targets = load_csv_data('pk_bic256_ax.csv')
+train_features, train_targets = load_csv_data('pk_bic256_ax_unwrapped_phase.csv')
+test_features, test_targets = load_csv_data('ljspeech_bic256_ax_unwrapped_phase.csv')
 
 # Create a SVM Classifier with RBF kernel and probability estimates enabled
 clf = svm.SVC(kernel='rbf', probability=True)

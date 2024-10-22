@@ -16,6 +16,8 @@ addpath('..\Speech samples\LJ_synthetic')
 addpath('..\Speech samples\LJ_natural')
 addpath('..\Speech samples\pk_synthetic')
 addpath('..\Speech samples\pk_natural')
+addpath('..\Speech samples\odss\natural\hifi-tts\92')
+addpath('..\Speech samples\odss\vits\hifi-tts\92')
 
 % Specify directory of .wav files
 natural_path = '..\Speech samples\pk_natural';
@@ -29,10 +31,6 @@ nsamp = 256;
 overlap = 50;
 nfft = 256;
 wind = hamming(nsamp);
-fs= 22050;
-
-% Define pre-emphasis filter
-pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
 
 % Initialise data matrices
 f_bic_ax = [];
@@ -60,19 +58,17 @@ for is_synthetic=0:1
         [s,fs] = audioread(wav_files(i).name);
         
         % Pre-emphasise
+        pe = tf([1,-0.95],1,1/fs,'Variable','z^-1');
         s = lsim(pe,s);
 
         % Bicoherence and skewness
         [B,sk,bic,axis] = bicoherence_modified(s,nfft,wind,nsamp,overlap);
-        
-        cbic = sqrt(bic) .* exp(1j*angle(B));
-        %[bicl,bic] = cepstrum_factorise(cbic,nfft);
-        bic = cbic;
 
         % Principal domain
         bicp = bic(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
         skp = sk(nfft/2+1:end, nfft/2+1:end).*triu(ones(nfft/2)).*fliplr(triu(ones(nfft/2)));
 
+        %{
         % Save bispectrum to csv file (2D feature classification)
         if is_synthetic
             writematrix(abs(skp), strcat('cnn_data\synthetic\sk256_', string(i), '.csv'));
@@ -81,8 +77,7 @@ for is_synthetic=0:1
             writematrix(abs(skp), strcat('cnn_data\real\sk256_', string(i), '.csv'));
             writematrix(abs(bicp), strcat('cnn_data\real\bic256_', string(i), '.csv'));
         end
-
-        %{
+        %}
 
         % Axial integral 
         bic_ax = trapz(bicp,1);
@@ -100,11 +95,11 @@ for is_synthetic=0:1
 
         % Add feature vectors to data matrices
         %f_moments = [f_moments; B_mag_m1,B_mag_m2,B_mag_m3,B_mag_m4,B_ph_m1,B_ph_m2,B_ph_m3,B_ph_m4];
-        f_bic_ax = [f_bic_ax;is_synthetic,abs(bic_ax)];
-        f_sk_ax = [f_sk_ax;is_synthetic,abs(sk_ax)];
-        f_bic_rad = [f_bic_rad;is_synthetic,abs(bic_rad)];
-        f_sk_rad = [f_sk_rad;is_synthetic,abs(sk_rad)];
-        %}
+        f_bic_ax = [f_bic_ax;is_synthetic,angle(bic_ax)];
+        %f_sk_ax = [f_sk_ax;is_synthetic,abs(sk_ax)];
+        %f_bic_rad = [f_bic_rad;is_synthetic,abs(bic_rad)];
+        %f_sk_rad = [f_sk_rad;is_synthetic,abs(sk_rad)];
+        
 
     end
 end

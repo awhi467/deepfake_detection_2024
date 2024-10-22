@@ -3,9 +3,10 @@ from sklearn.model_selection import train_test_split, KFold
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Open and read the .csv file and convert data to a list
-with open('ljspeech_cbic256_ax.csv', mode='r', encoding='utf-8') as file:
+with open('ljspeech_bic256_ax_unwrapped_phase.csv', mode='r', encoding='utf-8') as file:
     data = list(csv.reader(file, delimiter=','))
 data = data[1:]
 
@@ -29,6 +30,7 @@ recall_scores = []
 fpr_list = []
 tpr_list = []
 roc_auc_list = []
+confusion_matrices = []  # To store confusion matrices for each fold
 
 for train_index, test_index in kf.split(features):
     X_train = [features[i] for i in train_index]
@@ -58,6 +60,9 @@ for train_index, test_index in kf.split(features):
     fpr_list.append(fpr)
     tpr_list.append(tpr)
     roc_auc_list.append(roc_auc)
+    
+    # Compute confusion matrix
+    confusion_matrices.append(metrics.confusion_matrix(y_test, y_pred))
 
 # Calculate and print average metrics across all folds
 print("Average Accuracy:", np.mean(accuracy_scores))
@@ -80,4 +85,12 @@ plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
 plt.title('Receiver Operating Characteristic')
 plt.legend(loc="lower right")
+plt.show()
+
+# Plot the confusion matrix for the last fold
+plt.figure(figsize=(8, 6))
+sns.heatmap(confusion_matrices[-1], annot=True, fmt="d", cmap="Blues")
+plt.title('Confusion Matrix (Last Fold)')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
 plt.show()
